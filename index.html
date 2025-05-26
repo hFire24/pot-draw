@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stepwise Room Draw</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .pot { margin-bottom: 20px; border: 1px solid #ccc; padding: 10px; }
+    .room-output { margin-top: 20px; }
+    textarea { width: 100%; height: 60px; }
+    button { margin-right: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Stepwise Room Assignment</h2>
+
+  <div id="potsContainer"></div>
+  <button onclick="addPot()">Add New Pot</button>
+  <button onclick="removePot()">Remove Last Pot</button>
+  <button onclick="stepDraw()">Draw One Member</button>
+  <button onclick="drawAll()">Draw All Members</button>
+  <button onclick="reset()">Reset</button>
+  <div class="room-output">
+	<a href="potcalc.html">Balanced Pot Distribution & Layout</a>
+  </div>
+
+  <div class="room-output">
+    <h3>Room A</h3>
+    <ul id="roomA"></ul>
+
+    <h3>Room B</h3>
+    <ul id="roomB"></ul>
+  </div>
+
+  <script>
+    let potCount = 0;
+    let pots = [];
+    let initialized = false;
+    let currentPotIndex = 0;
+    let totalDraws = 0;
+
+    function addPot() {
+      potCount++;
+      const potDiv = document.createElement('div');
+      potDiv.className = 'pot';
+      potDiv.id = `pot${potCount}`;
+      potDiv.innerHTML = `
+        <h3>Pot ${potCount}</h3>
+        <textarea placeholder="One name per line" class="pot-textarea"></textarea>
+      `;
+      document.getElementById('potsContainer').appendChild(potDiv);
+    }
+
+    function removePot() {
+      if (potCount > 0) {
+        const lastPot = document.getElementById(`pot${potCount}`);
+        if (lastPot) {
+          lastPot.remove();
+          potCount--;
+        }
+      }
+    }
+
+    function getShuffled(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function initialize() {
+      const areas = Array.from(document.querySelectorAll('.pot-textarea'));
+      pots = areas.map(area => getShuffled(area.value.trim().split("\n").filter(Boolean)));
+      initialized = true;
+      currentPotIndex = 0;
+      totalDraws = 0;
+    }
+
+    function stepDraw(alertOnEmpty = true) {
+      if (!initialized) initialize();
+
+      const roomA = document.getElementById("roomA");
+      const roomB = document.getElementById("roomB");
+
+      // If all pots are empty, stop
+      if (pots.every(p => p.length === 0)) {
+        if (alertOnEmpty) alert("All members have been assigned.");
+        return false;
+      }
+
+      // Skip empty pots
+      while (pots[currentPotIndex]?.length === 0) {
+        currentPotIndex = (currentPotIndex + 1) % pots.length;
+      }
+
+      const currentPot = pots[currentPotIndex];
+	  const allDownToOne = pots.every(p => p.length <= 1);
+      const name = currentPot.pop();
+
+      
+      const countA = roomA.children.length;
+      const countB = roomB.children.length;
+
+      let target;
+      if (allDownToOne) {
+        target = (countA === countB)
+          ? (Math.random() < 0.5 ? roomA : roomB)
+          : (countA < countB ? roomA : roomB);
+      } else {
+        const roundParity = Math.floor(totalDraws / pots.length) % 2;
+        target = (roundParity === 0) ? roomA : roomB;
+      }
+
+      const li = document.createElement('li');
+      li.textContent = name;
+      target.appendChild(li);
+
+      currentPotIndex = (currentPotIndex + 1) % pots.length;
+      totalDraws++;
+      return true;
+    }
+
+    function drawAll() {
+      while (stepDraw(false)) { /* keep drawing until empty */ }
+      alert("All members have been assigned.");
+    }
+	
+	function reset() {
+		pots = [];
+		initialized = false;
+		currentPotIndex = 0;
+		totalDraws = 0;
+		document.getElementById("roomA").innerHTML = '';
+		document.getElementById("roomB").innerHTML = '';
+	}
+
+    // Start with 3 pots
+    for (let i = 0; i < 3; i++) addPot();
+  </script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Square Pot Distribution</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; }
+    input { width: 60px; margin-right: 10px; }
+    .result, .alternates, .layout { margin-top: 20px; font-size: 1.1em; }
+    .pot-block { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
+    .alt-option { cursor: pointer; color: #0077cc; text-decoration: underline; margin-top: 5px; display: block; }
+  </style>
+</head>
+<body>
+  <h2>Balanced Pot Distribution & Layout</h2>
+  <p>Enter total number of characters. This tool recommends the most square-like valid distribution.</p>
+
+  <label for="total">Total Characters:</label>
+  <input type="number" id="total" min="2">
+  <button onclick="calculate()">Calculate</button>
+
+  <div class="result" id="result"></div>
+  <div class="alternates" id="alternates"></div>
+  <div class="layout" id="layout"></div>
+
+  <script>
+    let savedAlternatives = [];
+
+    function validDistribution(total, pots) {
+      const base = Math.floor(total / pots);
+      const extra = total % pots;
+      const low = base;
+      const high = base + 1;
+      const lowCount = pots - extra;
+      const highCount = extra;
+
+      const allEqual = (extra === 0);
+      const lowEvenOk = allEqual || (low % 2 === 0);
+
+      if (lowEvenOk && lowCount >= 0 && highCount >= 0) {
+        return {
+          pots: pots,
+          low: low,
+          lowCount: lowCount,
+          high: high,
+          highCount: highCount,
+          deviation: Math.abs(pots - Math.sqrt(total))
+        };
+      }
+      return null;
+    }
+
+    function showLayout(config) {
+      const layout = document.getElementById('layout');
+      layout.innerHTML = `<strong>Pot Layout:</strong>`;
+      let potNumber = 1;
+      for (let i = 0; i < config.lowCount; i++) {
+        layout.innerHTML += `<div class="pot-block"><strong>Pot ${potNumber++}</strong><br>` +
+          Array(config.low).fill("[ Slot ]").join("<br>") + `</div>`;
+      }
+      for (let i = 0; i < config.highCount; i++) {
+        layout.innerHTML += `<div class="pot-block"><strong>Pot ${potNumber++}</strong><br>` +
+          Array(config.high).fill("[ Slot ]").join("<br>") + `</div>`;
+      }
+    }
+
+    function calculate() {
+      const total = parseInt(document.getElementById('total').value);
+      const result = document.getElementById('result');
+      const alternates = document.getElementById('alternates');
+      const layout = document.getElementById('layout');
+
+      if (isNaN(total) || total < 2) {
+        result.innerHTML = "Enter a number 2 or greater.";
+        alternates.innerHTML = "";
+        layout.innerHTML = "";
+        return;
+      }
+
+      savedAlternatives = [];
+      let validOptions = [];
+      const startPots = (total > 5) ? 2 : 1;
+
+      for (let pots = startPots; pots <= total; pots++) {
+        const d = validDistribution(total, pots);
+        if (d) validOptions.push(d);
+      }
+
+      if (validOptions.length === 0) {
+        result.innerHTML = "No valid distribution found.";
+        alternates.innerHTML = "";
+        layout.innerHTML = "";
+        return;
+      }
+
+      validOptions.sort((a, b) => a.deviation - b.deviation || a.pots - b.pots);
+      const best = validOptions[0];
+      savedAlternatives = validOptions;
+
+      result.innerHTML = `
+        <strong>Recommended:</strong><br>
+        ${best.lowCount > 0 ? `${best.lowCount} pot(s) with ${best.low} member(s)<br>` : ""}
+        ${best.highCount > 0 ? `${best.highCount} pot(s) with ${best.high} member(s)<br>` : ""}
+        <strong>Total pots:</strong> ${best.pots}
+      `;
+
+      const alt = validOptions.slice(1, 4);
+      if (alt.length > 0) {
+        alternates.innerHTML = `<strong>Alternatives:</strong><br>`;
+        alt.forEach((opt, i) => {
+          const text = `${opt.pots} pots: ${opt.lowCount > 0 ? `${opt.lowCount}×${opt.low}` : ""} ${opt.highCount > 0 ? `${opt.highCount}×${opt.high}` : ""}`;
+          const div = document.createElement("div");
+          div.className = "alt-option";
+          div.textContent = text;
+          div.onclick = () => showLayout(opt);
+          alternates.appendChild(div);
+        });
+      } else {
+        alternates.innerHTML = "";
+      }
+
+      showLayout(best);
+    }
+  </script>
+</body>
+</html>
