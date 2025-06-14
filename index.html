@@ -23,13 +23,25 @@
   <div class="room-output">
 	<a href="potcalc.html">Balanced Pot Distribution & Layout</a>
   </div>
-
   <div class="room-output">
     <h3>Room A</h3>
     <ul id="roomA"></ul>
 
     <h3>Room B</h3>
     <ul id="roomB"></ul>
+  </div>
+  <div id="comparison-section" style="display:none; margin-top: 30px;">
+    <h3>Room Comparison</h3>
+    <p>Paste the old room assignments below (one name per line).</p>
+
+    <h4>Old Room A</h4>
+    <textarea id="oldRoomA"></textarea>
+
+    <h4>Old Room B</h4>
+    <textarea id="oldRoomB"></textarea>
+
+    <button onclick="compareRooms()">Compare Rooms</button>
+    <div id="comparisonOutput" style="white-space: pre-wrap; margin-top: 15px; color: darkred;"></div>
   </div>
 
   <script>
@@ -86,6 +98,7 @@
       // If all pots are empty, stop
       if (pots.every(p => p.length === 0)) {
         if (alertOnEmpty) alert("All members have been assigned.");
+        document.getElementById("comparison-section").style.display = "block";
         return false;
       }
 
@@ -124,19 +137,59 @@
     function drawAll() {
       while (stepDraw(false)) { /* keep drawing until empty */ }
       alert("All members have been assigned.");
+      document.getElementById("comparison-section").style.display = "block";
     }
 	
-	function reset() {
-		pots = [];
-		initialized = false;
-		currentPotIndex = 0;
-		totalDraws = 0;
-		document.getElementById("roomA").innerHTML = '';
-		document.getElementById("roomB").innerHTML = '';
-	}
+    function reset() {
+      pots = [];
+      initialized = false;
+      currentPotIndex = 0;
+      totalDraws = 0;
+      document.getElementById("roomA").innerHTML = '';
+      document.getElementById("roomB").innerHTML = '';
+    }
 
     // Start with 3 pots
     for (let i = 0; i < 3; i++) addPot();
+
+    function compareRooms() {
+      const oldA = document.getElementById("oldRoomA").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
+      const oldB = document.getElementById("oldRoomB").value.trim().split("\n").map(x => x.trim()).filter(Boolean);
+
+      const currentA = Array.from(document.getElementById("roomA").children).map(li => li.textContent.trim());
+      const currentB = Array.from(document.getElementById("roomB").children).map(li => li.textContent.trim());
+
+      const output = [];
+      const allNames = new Set([...oldB, ...oldA, ...currentB, ...currentA]);
+
+      for (const name of allNames) {
+        const shouldBeInA = currentA.includes(name);
+        const shouldBeInB = currentB.includes(name);
+        const isInA = oldA.includes(name);
+        const isInB = oldB.includes(name);
+
+        if ((shouldBeInA && isInA) || (shouldBeInB && isInB)) {
+          // Already in correct room
+          continue;
+        }
+
+        if ((shouldBeInA && isInB)) {
+          output.push(`Move ${name} to Room A.`);
+        } else if ((shouldBeInB && isInA)) {
+          output.push(`Move ${name} to Room B.`);
+        } else if ((shouldBeInA || shouldBeInB) && !isInA && !isInB) {
+          output.push(`Add ${name} to Room ${shouldBeInA ? "A" : "B"}.`);
+        } else if (!shouldBeInA && !shouldBeInB && (isInA || isInB)) {
+          output.push(`Remove ${name}.`);
+        }
+      }
+
+      if (output.length === 0) {
+        output.push("No changes needed. You nailed it. 🎯");
+      }
+
+      document.getElementById("comparisonOutput").textContent = output.join("\n");
+    }
   </script>
 </body>
 </html>
